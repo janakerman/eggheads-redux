@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import {createStore, combineReducers} from 'redux';
-import {Provider} from 'react-redux';
+import {Provider, connect} from 'react-redux';
 
 const todo = (state = [], action) => {
   switch (action.type) {
@@ -122,45 +122,33 @@ const TodoList = ({todos, onTodoClick}) => {
   );
 }
 
-class VisibleTodoList extends React.Component {
-  componentDidMount() {
-    const {store} = this.context;
-    this.unsubscribe = store.subscribe(() => this.forceUpdate());
-  }
-
-  componentWillUnmount() {
-    this.unsubscribe();
-  }
-
-  render() {
-    const {store}  = this.context;
-    const state = store.getState();
-
-    return (
-      <TodoList todos={getVisibleTodos(state.todos, state.visibilityFilter)}
-        onTodoClick={id => store.dispatch({
-          type: 'TOGGLE_TODO',
-          id
-        })
-      } />
-    );
-  }
-}
-// Needed to ensure this component receives the store on context.
-VisibleTodoList.contextTypes = {
-  store: React.PropTypes.object
+// VisibleTodoList container component
+const mapStateToTodoListProps = (state) => {
+  return {
+    todos: getVisibleTodos(state.todos, state.visibilityFilter)
+  };
 };
+const mapDispatchToTodoListProps = (dispatch) => {
+  return {
+    onTodoClick: (id) => {
+      dispatch({
+        type: 'TOGGLE_TODO',
+        id
+      });
+    }
+  };
+};
+const VisibleTodoList = connect(mapStateToTodoListProps, mapDispatchToTodoListProps)(TodoList);
 
-// Functional components receive the context as their second argument (when contextTypes is defined)
-// so we can simply destructure this.
-const AddTodo = (props, {store}) => {
+// AddTodo simply needs a dispatch function, and doesn't need any props.
+let AddTodo = ({dispatch}) => {
   let input;
 
 	return (
   	<div>
       <input type="text" ref={node => input = node} />
       <button onClick={() => {
-        store.dispatch({
+        dispatch({
           type: 'ADD_TODO',
           text: input.value,
           id: nextTodoId++
@@ -172,9 +160,13 @@ const AddTodo = (props, {store}) => {
     </div>
   );
 };
-AddTodo.contextTypes = {
-  store: React.PropTypes.object
-};
+// Below we simply use connect and pass the dispatch function through.
+// Also note we reassigned AddTodo so the user never needs to know about this.
+// The first null - on the props maps, specifies that the component doesn't need to subscribe to the store at all.
+// The second null - on the dispatch maps, specifies that the only dispatch is the vanilla dispatch function,
+// available under dispatch (see the constructor)
+// We can then remove the two nulls from `AddTodo = connect(null, null)(AddTodo)` to simplyify the code further.
+AddTodo = connect()(AddTodo);
 
 const Footer = () => (
 	<p>
