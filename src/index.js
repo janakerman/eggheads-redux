@@ -69,35 +69,27 @@ const Link = ({active, children, onClick}) => {
   );
 }
 
-class FilterLink extends React.Component {
-  componentDidMount() {
-    const {store} = this.context;
-    this.unsubscribe = store.subscribe(() => this.forceUpdate());
+// Props of the container component are passed in via the second param to the props maps function.
+// This allows us to take properties given by a user, and compare them to the state.
+const mapStateToLinkProps = (state, ownProps) => {
+  return {
+    active: ownProps.filter === state.visibilityFilter
   }
+};
 
-  componentWillUnmount() {
-    this.unsubscribe();
-  }
-
-  render() {
-    const props = this.props;
-    const {store} = this.context;
-    const state = store.getState();
-
-    return (
-      <Link active={props.filter === state.visibilityFilter}
-        onClick={() => store.dispatch({
-          type: 'SET_VISIBILITY_FILTER',
-          filter: props.filter
-        })}>
-          {props.children}
-      </Link>
-    )
+// Like the map props function above, we need to use our props here too, and thankfully the second argument
+// provides the properties for us.
+const mapDispatchToLinkProps = (dispatch, ownProps) => {
+  return {
+    onClick: () => {
+      dispatch({
+        type: 'SET_VISIBILITY_FILTER',
+        filter: ownProps.filter
+      });
+    }
   }
 }
-FilterLink.contextTypes = {
-  store: React.PropTypes.object
-};
+const FilterLink = connect(mapStateToLinkProps, mapDispatchToLinkProps)(Link);
 
 const Todo = ({onClick, completed, text}) => {
 	return (
@@ -194,6 +186,7 @@ const getVisibleTodos = (todos, filter) => {
 }
 
 let nextTodoId = 0;
+// Here, <AddTodo> references the redux container component that already has dispatch and wraps our UI component.
 const TodoApp = () => (
   <div>
     <AddTodo />
