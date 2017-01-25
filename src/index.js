@@ -70,7 +70,7 @@ const Link = ({active, children, onClick}) => {
 
 class FilterLink extends React.Component {
   componentDidMount() {
-    const {store} = this.props;
+    const {store} = this.context;
     this.unsubscribe = store.subscribe(() => this.forceUpdate());
   }
 
@@ -80,7 +80,7 @@ class FilterLink extends React.Component {
 
   render() {
     const props = this.props;
-    const {store} = this.props;
+    const {store} = this.context;
     const state = store.getState();
 
     return (
@@ -94,6 +94,9 @@ class FilterLink extends React.Component {
     )
   }
 }
+FilterLink.contextTypes = {
+  store: React.PropTypes.object
+};
 
 const Todo = ({onClick, completed, text}) => {
 	return (
@@ -120,7 +123,7 @@ const TodoList = ({todos, onTodoClick}) => {
 
 class VisibleTodoList extends React.Component {
   componentDidMount() {
-    const {store} = this.props;
+    const {store} = this.context;
     this.unsubscribe = store.subscribe(() => this.forceUpdate());
   }
 
@@ -129,7 +132,7 @@ class VisibleTodoList extends React.Component {
   }
 
   render() {
-    const {store}  = this.props;
+    const {store}  = this.context;
     const state = store.getState();
 
     return (
@@ -142,8 +145,14 @@ class VisibleTodoList extends React.Component {
     );
   }
 }
+// Needed to ensure this component receives the store on context.
+VisibleTodoList.contextTypes = {
+  store: React.PropTypes.object
+};
 
-const AddTodo = ({store}) => {
+// Functional components receive the context as their second argument (when contextTypes is defined)
+// so we can simply destructure this.
+const AddTodo = (props, {store}) => {
   let input;
 
 	return (
@@ -161,17 +170,20 @@ const AddTodo = ({store}) => {
       </button>
     </div>
   );
-}
+};
+AddTodo.contextTypes = {
+  store: React.PropTypes.object
+};
 
-const Footer = ({store}) => (
+const Footer = () => (
 	<p>
     Show:
     {' '}
-    <FilterLink filter='SHOW_ALL' store={store}>All</FilterLink>
+    <FilterLink filter='SHOW_ALL'>All</FilterLink>
     {' '}
-    <FilterLink filter='SHOW_ACTIVE' store={store}>Active</FilterLink>
+    <FilterLink filter='SHOW_ACTIVE'>Active</FilterLink>
     {' '}
-    <FilterLink filter='SHOW_COMPLETED' store={store}>Completed</FilterLink>
+    <FilterLink filter='SHOW_COMPLETED'>Completed</FilterLink>
   </p>
 );
 
@@ -189,12 +201,32 @@ const getVisibleTodos = (todos, filter) => {
 }
 
 let nextTodoId = 0;
-const TodoApp = ({store}) => (
+const TodoApp = () => (
   <div>
-    <AddTodo store={store} />
-    <VisibleTodoList store={store} />
-    <Footer store={store} />
+    <AddTodo />
+    <VisibleTodoList />
+    <Footer />
   </div>
 );
 
-ReactDOM.render(<TodoApp store={createStore(todoApp)} /> , document.getElementById('root'));
+class Provider extends React.Component {
+  getChildContext() {
+    return {
+      store: this.props.store
+    };
+  }
+
+  render() {
+    return this.props.children;
+  }
+}
+// Needed to switch on the advanced context feature.
+Provider.childContextTypes = {
+  store: React.PropTypes.object
+};
+
+ReactDOM.render(
+  <Provider store={createStore(todoApp)}>
+    <TodoApp />
+  </Provider>
+, document.getElementById('root'));
